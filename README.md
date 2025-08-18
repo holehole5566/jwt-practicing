@@ -33,7 +33,7 @@ https://github.com/FiloSottile/mkcert
 
 ---
 
-## 2. JWT 签名原理
+## 2. JWT 原理
 
 ### JWT 結構
 <base64(header)>.<base64(payload)>.<base64(signature)>
@@ -122,46 +122,3 @@ https://github.com/FiloSottile/mkcert
 | 長期 token 被濫用 | 短期 Access Token + Refresh Token |
 | 私鑰洩漏 | 妥善存放在 HSM / Key Vault / 定期輪換 |
 | 伺服器邏輯漏洞 | Access Control、IDOR 檢查 |
-
----
-
-## 7. 範例程式 (Python RS256 驗簽 Google JWT)
-```python
-import requests
-import jwt
-from jwt.algorithms import RSAAlgorithm
-from jwt import InvalidSignatureError, ExpiredSignatureError, InvalidTokenError
-
-id_token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjRlYj..."  
-
-GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
-jwks = requests.get(GOOGLE_JWKS_URL).json()
-
-headers = jwt.get_unverified_header(id_token)
-kid = headers["kid"]
-
-public_key = None
-for key in jwks["keys"]:
-    if key["kid"] == kid:
-        public_key = RSAAlgorithm.from_jwk(key)
-        break
-
-if not public_key:
-    raise Exception("找不到對應的 Google 公鑰")
-
-try:
-    payload = jwt.decode(
-        id_token,
-        public_key,
-        algorithms=["RS256"],
-        audience="YOUR_LINE_CLIENT_ID",
-        issuer="https://accounts.google.com"
-    )
-    print("驗簽成功，Payload：", payload)
-
-except ExpiredSignatureError:
-    print("JWT 已過期")
-except InvalidSignatureError:
-    print("簽名驗證失敗")
-except InvalidTokenError as e:
-    print("JWT 無效:", e)
